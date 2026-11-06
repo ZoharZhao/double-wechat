@@ -216,7 +216,7 @@ bundle id 相同（`com.tencent.xin1`）→ 覆盖安装，**聊天记录与登�
 
 ---
 
-## 六、仓库内容
+## 六、仓库内容与下载
 
 ```
 .
@@ -228,10 +228,26 @@ bundle id 相同（`com.tencent.xin1`）→ 覆盖安装，**聊天记录与登�
     └── wechat_official_1024.png    微信官方 App 图标 1024×1024
 ```
 
-**成品 IPA 不放仓库**：单个 IPA 约 288 MB，超过 GitHub 单文件 100 MB 限制。
-需要时按步骤 1–3 本地生成，或从仓库 Releases 页下载（若已上传）。
+### 成品 IPA
+
+**去 [Releases](https://github.com/ZoharZhao/double-wechat/releases) 下载 `WeChat_clean.ipa`。**
+
+成品不放仓库本体，因为单个 IPA 约 288 MB，超过 GitHub 单文件 100 MB 的硬限制；
+Release asset 上限 2 GB，因此走 Release 分发。
+
+| 项 | 值 |
+|---|---|
+| 文件名 | `WeChat_clean.ipa` |
+| bundle id | `com.tencent.xin1` |
+| 显示名 | `WeChat` |
+| 版本 | 8.0.71 / 8.0.71.34 |
+| 大小 | 288 MB |
+| sha256 | `7133d7a1495d88bbeba8ed5b652e866dd946f3f584bcd6f0892030386b6c2f9e` |
+
+来源链路：`fchat_8.0.71.ipa`（砸壳）→ `ipa_rebrand.py` 改 id/改名 → 替换官方图标 → `WeChat_clean.ipa`。
 
 `ipa_rebrand.py` 依赖：Python 3.9+、macOS 自带 `unzip` / `zip` / `codesign`，无第三方库。
+`dl2.py` 依赖：仅 Python 标准库。
 
 ---
 
