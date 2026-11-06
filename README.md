@@ -230,21 +230,61 @@ bundle id 相同（`com.tencent.xin1`）→ 覆盖安装，**聊天记录与登�
 
 ### 成品 IPA
 
-**去 [Releases](https://github.com/ZoharZhao/double-wechat/releases) 下载 `WeChat_clean.ipa`。**
+**去 [Releases](https://github.com/ZoharZhao/double-wechat/releases) 下载，两个版本按需选一个。**
 
 成品不放仓库本体，因为单个 IPA 约 288 MB，超过 GitHub 单文件 100 MB 的硬限制；
 Release asset 上限 2 GB，因此走 Release 分发。
 
-| 项 | 值 |
-|---|---|
-| 文件名 | `WeChat_clean.ipa` |
-| bundle id | `com.tencent.xin1` |
-| 显示名 | `WeChat` |
-| 版本 | 8.0.71 / 8.0.71.34 |
-| 大小 | 288 MB |
-| sha256 | `7133d7a1495d88bbeba8ed5b652e866dd946f3f584bcd6f0892030386b6c2f9e` |
+| 文件 | 注入 | 说明 | sha256 |
+|---|---|---|---|
+| `WeChat_nokeepalive.ipa` | 无 | **推荐**。二进制与原版一致，风控风险最低 | `7133d7a1495d88bbeba8ed5b652e866dd946f3f584bcd6f0892030386b6c2f9e` |
+| `WeChat_keepalive.ipa` | `keepalive.dylib` | 后台静音音频保活，退到后台不易被冻结，能收到本地通知 | `b5d3f7e7fe7f4251a44e3085dbccd0144a11b60db5af0322c029f311175a3538` |
 
-来源链路：`fchat_8.0.71.ipa`（砸壳）→ `ipa_rebrand.py` 改 id/改名 → 替换官方图标 → `WeChat_clean.ipa`。
+两者除 `Frameworks/keepalive.dylib` 外完全相同：
+
+```
+bundle id            com.tencent.xin1
+CFBundleDisplayName  WeChat
+version              8.0.71 / 8.0.71.34
+主二进制              500,581,632 B（两个包一致）
+icon                 官方 1024 图，桌面/设置/通知统一
+signing              not signed（交给 Sideloadly / SideStore 重签）
+```
+
+来源链路：
+`fchat_8.0.71.ipa`（砸壳）→ `ipa_rebrand.py` 改 id/改名 → 替换官方图标
+→ `WeChat_nokeepalive.ipa` → 注入 `keepalive.dylib` → `WeChat_keepalive.ipa`
+
+### 保活版说明
+
+`keepalive.dylib` 用 `AVAudioEngine` + `AVAudioSourceNode` 输出全零采样，
+配合微信原生就有的 `UIBackgroundModes: audio`，让系统认为 App 正在播放音频而不挂起。
+无音频文件、无实际声音、CPU 占用接近零。
+
+代价：
+
+- 后台耗电约 3–8%/小时；
+- `dyld` 镜像数 +1，理论上可被客户端完整性检测发现；
+- 出现「非官方客户端」提示时，换回 `WeChat_nokeepalive.ipa` 即可（数据保留）。
+
+源码见 `tool/keepalive.m`，编译：
+
+```bash
+SDK=$(xcrun --sdk iphoneos --show-sdk-path)
+xcrun --sdk iphoneos clang -arch arm64 -dynamiclib -fobjc-arc \
+  -isysroot "$SDK" -miphoneos-version-min=15.0 \
+  -framework Foundation -framework AVFoundation -framework UIKit \
+  -o keepalive.dylib keepalive.m
+codesign -f -s - keepalive.dylib
+```
+
+注入（需 `insert_dylib`）：
+
+```bash
+cp keepalive.dylib Payload/WeChat.app/Frameworks/
+insert_dylib --strip-codesig --inplace \
+  @executable_path/Frameworks/keepalive.dylib Payload/WeChat.app/WeChat
+```
 
 `ipa_rebrand.py` 依赖：Python 3.9+、macOS 自带 `unzip` / `zip` / `codesign`，无第三方库。
 `dl2.py` 依赖：仅 Python 标准库。
